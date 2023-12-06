@@ -62,7 +62,7 @@ def getAlignedImaged(directory, images):
     return alignedImages
 
 
-def calculateOpticalFlow(images, method):
+def calculateOpticalFlow(images, method, image_directory=None, flowmap_directory=None):
     if method == 'cv2':
         # convert images to gray scale
         gray_images = [cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) for img in images]
@@ -73,22 +73,24 @@ def calculateOpticalFlow(images, method):
             flow_cv = cv2.calcOpticalFlowFarneback(gray_images[i-1], gray_images[i], None, pyr_scale = 0.5, levels = 5, winsize = 11, iterations = 5, poly_n = 5, poly_sigma = 1.1, flags = 0)
             flow_maps.append(flow_cv)
         return flow_maps
-    elif method == 'raft':
+    elif method == 'raft' and image_directory and flowmap_directory:
         # https://stackoverflow.com/questions/325463/launch-a-shell-command-with-in-a-python-script-wait-for-the-termination-and-ret
-        command = ""
-        process = subprocess.run(command, shell=True, stdout=subprocess.PIPE)
-        process.wait()
+        # calculate pair-wise optical flow maps
+        num_digits = 3
+        filenames = os.listdir(image_directory)
+        for i in range(1, len(filenames)):
+            IMAGE_PATH_BEFORE_FRAME = filenames[i-1]
+            IMAGE_PATH_AFTER_FRAME = filenames[i]
+            SAVE_IMAGE_PATH = os.path.join(flowmap_directory, f"img_{i-1:0>{num_digits}}.png")
+            command = f"python3 raft.py -i {IMAGE_PATH_BEFORE_FRAME} {IMAGE_PATH_AFTER_FRAME} -s {SAVE_IMAGE_PATH}"
+            process = subprocess.run(command, shell=True, stdout=subprocess.PIPE)
+            process.wait()
 
-        readImages        return []
-        # # prepare images
-        # tensor_images = [torch.tensor(cv2.cvtColor(img), cv2.COLOR_BGR2RGB).transpose(2, 0, 1) for img in images]
-        # img1_batch = torch.stack(tensor_images[:-1])
-        # img2_batch = torch.stack(tensor_images[1:])
-
-        # # load model
-        # model = 
-        # # calculate pair-wise optical flow maps
-    return []
+        # read pair-wise optical flow maps
+        flow_maps = readImages(flowmap_directory)
+        return flow_maps
+    else:
+        return None
 
 
 def subjectDetection(image):
@@ -173,7 +175,7 @@ def pipeline():
     # 2. read/calculate optical flow maps
     flow_maps = readImages(flowmap_directory)
     if not flow_maps:
-        flow_maps = calculateOpticalFlow(images, cache=True)
+        flow_maps = calculateOpticalFlow(images, method='raft', image_directory=image_directory, flowmap_directory=flowmap_directory)
     print(f"number of flow maps: {len(flow_maps)} = N-1")
     print()
 

@@ -5,6 +5,8 @@ from scipy.misc import face
 from scipy.ndimage import zoom
 from scipy.special import logsumexp
 import torch
+import matplotlib.pyplot as plt
+from pysaliency.plotting import visualize_distribution
 
 import deepgaze_pytorch
 
@@ -23,10 +25,20 @@ def getHeadSegmentation(image):
         plt.show()
     return segmentation_map
 
+def visualizeAttention(image,log_density_prediction ):
+    f, axs = plt.subplots(nrows=1, ncols=3, figsize=(12, 3))
+    axs[0].imshow(image)
+    axs[0].set_axis_off()
+    axs[1].matshow(log_density_prediction.detach().cpu().numpy()[0, 0])  # first image in batch, first (and only) channel
+    axs[1].set_axis_off()
+    visualize_distribution(log_density_prediction.detach().cpu().numpy()[0, 0], ax=axs[2])
+    axs[2].set_axis_off()
+    plt.show()
+
+
 def getAttentionMask(image):
 
-    DEVICE = 'cuda'
-
+    DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
     # you can use DeepGazeI or DeepGazeIIE
     model = deepgaze_pytorch.DeepGazeIIE(pretrained=True).to(DEVICE)
 
