@@ -83,8 +83,10 @@ def plot(imgs, **imshow_kwargs):
 
 import cv2
 
-img0_path = "../examples/input_0.png"
-img1_path = "../examples/input_1.png"
+# img0_path = "../examples/input_0.png"
+# img1_path = "../examples/input_1.png"
+img0_path = "../examples/img_0.JPG"
+img1_path = "../examples/img_1.JPG"
 img0_tensor = torch.tensor(cv2.cvtColor(cv2.imread(img0_path, cv2.IMREAD_UNCHANGED), cv2.COLOR_BGR2RGB).transpose(2, 0, 1))
 img1_tensor = torch.tensor(cv2.cvtColor(cv2.imread(img1_path, cv2.IMREAD_UNCHANGED), cv2.COLOR_BGR2RGB).transpose(2, 0, 1))
 img1_batch = torch.stack([img0_tensor])
@@ -155,6 +157,7 @@ print(f"dtype = {predicted_flows.dtype}")
 print(f"shape = {predicted_flows.shape} = (N, 2, H, W)")
 print(f"min = {predicted_flows.min()}, max = {predicted_flows.max()}")
 
+np.save("output/predicted_flows_backward", predicted_flows.detach().numpy())
 
 ####################################
 # Visualizing predicted flows
