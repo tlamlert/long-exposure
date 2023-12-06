@@ -157,7 +157,7 @@ print(f"dtype = {predicted_flows.dtype}")
 print(f"shape = {predicted_flows.shape} = (N, 2, H, W)")
 print(f"min = {predicted_flows.min()}, max = {predicted_flows.max()}")
 
-np.save("output/predicted_flows_backward", predicted_flows.detach().numpy())
+np.save("output/predicted_flows_forward", predicted_flows.detach().numpy())
 
 ####################################
 # Visualizing predicted flows
