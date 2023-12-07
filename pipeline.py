@@ -2,9 +2,13 @@ import os
 import cv2
 import numpy as np
 import subprocess
+import torch
+from torchvision.utils import flow_to_image
 
+# internal imports
 from alignImages import alignImages
 from composite import calc_Mflow, alpha_blending
+from raft import calculateRaftOpticalFlow
 
 """
 Long Exposure Pipeline
@@ -32,7 +36,7 @@ def readImages(directory):
     for filename in os.listdir(directory):
         if filename == "aligned_images":
             continue
-        img = cv2.imread(os.path.join(directory, filename))
+        img = cv2.imread(os.path.join(directory, filename), cv2.IMREAD_UNCHANGED)
         images.append(img)
     return images
 
@@ -62,35 +66,39 @@ def getAlignedImaged(directory, images):
     return alignedImages
 
 
-def calculateOpticalFlow(images, method, image_directory=None, flowmap_directory=None):
+def calculateOpticalFlow(images, method, from_cache=False, flowmap_dir=None):
+    if flowmap_dir:
+        flowmap_dir = os.path.join(flowmap_dir, method)
+    
+    # load from cache if possible
+    if from_cache and flowmap_dir and len(os.listdir(flowmap_dir)) == len(images)-1:
+        flowmaps = []
+        for filename in os.listdir(flowmap_dir):
+            flowmap = np.load(os.path.join(flowmap_dir, filename))
+            flowmaps.append(flowmap)
+        return flowmaps
+    
     if method == 'cv2':
         # convert images to gray scale
         gray_images = [cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) for img in images]
         
         # calculate pair-wise optical flow maps
-        flow_maps = []
-        for i in range(1, len(gray_images)):
-            flow_cv = cv2.calcOpticalFlowFarneback(gray_images[i-1], gray_images[i], None, pyr_scale = 0.5, levels = 5, winsize = 11, iterations = 5, poly_n = 5, poly_sigma = 1.1, flags = 0)
-            flow_maps.append(flow_cv)
-        return flow_maps
-    elif method == 'raft' and image_directory and flowmap_directory:
-        # https://stackoverflow.com/questions/325463/launch-a-shell-command-with-in-a-python-script-wait-for-the-termination-and-ret
+        cv2flow = lambda img1, img2: cv2.calcOpticalFlowFarneback(img1, img2, None, pyr_scale = 0.5, levels = 5, winsize = 11, iterations = 5, poly_n = 5, poly_sigma = 1.1, flags = 0)
+        flowmaps = [cv2flow(gray_images[i-1], gray_images[i]) for i in range(1, len(gray_images))]
+    
+    elif method == 'raft':
         # calculate pair-wise optical flow maps
-        num_digits = 3
-        filenames = os.listdir(image_directory)
-        for i in range(1, len(filenames)):
-            IMAGE_PATH_BEFORE_FRAME = filenames[i-1]
-            IMAGE_PATH_AFTER_FRAME = filenames[i]
-            SAVE_IMAGE_PATH = os.path.join(flowmap_directory, f"img_{i-1:0>{num_digits}}.png")
-            command = f"python3 raft.py -i {IMAGE_PATH_BEFORE_FRAME} {IMAGE_PATH_AFTER_FRAME} -s {SAVE_IMAGE_PATH}"
-            process = subprocess.run(command, shell=True, stdout=subprocess.PIPE)
-            process.wait()
-
-        # read pair-wise optical flow maps
-        flow_maps = readImages(flowmap_directory)
-        return flow_maps
+        flowmaps = calculateRaftOpticalFlow(images)
+        
     else:
-        return None
+        flowmaps = []
+    
+    # cache if possible
+    if flowmap_dir:
+        for i, flowmap in enumerate(flowmaps):
+            np.save(os.path.join(flowmap_dir, f"{method}_flowmap_{i:0>{3}}"), flowmap)
+
+    return flowmaps
 
 
 def subjectDetection(image):
@@ -168,16 +176,22 @@ def pipeline():
     images = readImages(image_directory)
     print(f"number of images: {len(images)} = N")
 
-    # 2. align images using the first frame as the reference
-    aligned_images_directory = "examples/helen/aligned_images"
-    images = getAlignedImaged(aligned_images_directory, images)
+    # # 2. align images using the first frame as the reference
+    # aligned_images_directory = "examples/helen/aligned_images"
+    # images = getAlignedImaged(aligned_images_directory, images)
 
     # 2. read/calculate optical flow maps
-    flow_maps = readImages(flowmap_directory)
-    if not flow_maps:
-        flow_maps = calculateOpticalFlow(images, method='raft', image_directory=image_directory, flowmap_directory=flowmap_directory)
+    method = "raft"
+    flow_maps = calculateOpticalFlow(images, method=method, from_cache=False, flowmap_dir=flowmap_directory)
     print(f"number of flow maps: {len(flow_maps)} = N-1")
+    print(f"flow shape: {flow_maps[0].shape} = (H, W, 2)")
     print()
+
+    flow_img = flow_to_image(torch.tensor(flow_maps[0].transpose(2, 0, 1), dtype=torch.float32)).numpy().transpose(1, 2, 0)
+    print(flow_img.shape)
+    cv2.imshow("example flow map", flow_img)
+    cv2.waitKey()
+    cv2.destroyAllWindows()
 
     # 3. subject detection (creating the face mask) -> one face mask
     sharp_image = images[0]
