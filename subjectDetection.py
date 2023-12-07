@@ -76,6 +76,7 @@ def getAttentionMask(image):
 def normalize(array):
     # print("YO SHAPE", array.shape)
     return (array-np.min(array))/(np.max(array)-np.min(array))
+    
 
 
 # # img0_path = "./examples/helen/img_0.JPG"
