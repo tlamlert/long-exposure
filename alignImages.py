@@ -27,7 +27,8 @@ def alignImages(images):
         mat = calculate_transform(pointsImg, pointsRoot, type='rigid')
 
         # Warp img
-        warpedImg = warp_images(root_img, img, mat)
+        warpedImg = warp_images(img, root_img, mat)
+        # warpedImg = warp_images(root_img, img, mat)
 
         aligned_images.append(warpedImg)
 
@@ -63,8 +64,10 @@ def warp_images(A, B, transform_M):
 
     # Step 3 - Calculate the width and height of the output image.
     B_h, B_w = B.shape[1], B.shape[0]
-    H = dRow + max(B_h-1, warped_A_rect[0][0], warped_A_rect[1][0], warped_A_rect[2][0], warped_A_rect[3][0])
-    W = dCol + max(B_w-1, warped_A_rect[0][1], warped_A_rect[1][1], warped_A_rect[2][1], warped_A_rect[3][1])
+    H = A.shape[1]
+    W = A.shape[0]
+    # H = dRow + max(B_h-1, warped_A_rect[0][0], warped_A_rect[1][0], warped_A_rect[2][0], warped_A_rect[3][0])
+    # W = dCol + max(B_w-1, warped_A_rect[0][1], warped_A_rect[1][1], warped_A_rect[2][1], warped_A_rect[3][1])
 
     # Create a translation transform T that translates B to account for any shift of A. This is a 2x3 affine matrix representing the translation.
     transform_T = np.array(translation_xy, dtype=np.float32)[:2, :]

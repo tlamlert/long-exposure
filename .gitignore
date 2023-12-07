@@ -1,5 +1,6 @@
 __pycache__
 
+/deepgaze_pytorch/*
 /RAFT/helen/*
 /flowmap/cv2/*
 /flowmap/raft/*

@@ -1,7 +1,6 @@
 import os
 import cv2
 import numpy as np
-import subprocess
 import torch
 from torchvision.utils import flow_to_image
 
@@ -9,6 +8,7 @@ from torchvision.utils import flow_to_image
 from alignImages import alignImages
 from composite import calc_Mflow, alpha_blending
 from raft import calculateRaftOpticalFlow
+from subjectDetection import getAttentionMask, getHeadSegmentation, normalize
 
 """
 Long Exposure Pipeline
@@ -25,7 +25,7 @@ Long Exposure Pipeline
 """
 
 
-def readImages(directory):
+def readImages(directory, resize_scale=1):
     """
     Read and return a list of images from directory
 
@@ -34,9 +34,11 @@ def readImages(directory):
     """
     images = []
     for filename in os.listdir(directory):
-        if filename == "aligned_images":
+        if os.path.isdir(filename) or filename == "aligned_images" or filename == "output" or filename == "flow_map":
             continue
         img = cv2.imread(os.path.join(directory, filename), cv2.IMREAD_UNCHANGED)
+        if resize_scale != 1:
+            img = cv2.resize(img, (0, 0), fx=resize_scale, fy=resize_scale)
         images.append(img)
     return images
 
@@ -50,17 +52,18 @@ def writeImages(directory, images):
         cv2.imwrite(os.path.join(directory, f"img_{i:0>{num_digits}}.png"), img)
 
 
-def getAlignedImaged(directory, images):
+def getAlignedImaged(images, from_cache=False, directory=None):
     # Read in cached aligned iimages if exists
-    if len(os.listdir(directory)) != 0:
+    if from_cache and directory and len(os.listdir(directory)) > 0:
         alignedImages = []
         for filename in os.listdir(directory):
             img = cv2.imread(os.path.join(directory, filename))
             alignedImages.append(img)
+        return alignedImages
 
     # Else generate aligned images and save to directory
-    else:
-        alignedImages = alignImages(images)
+    alignedImages = alignImages(images)
+    if directory:
         writeImages(directory, alignedImages)
         
     return alignedImages
@@ -69,9 +72,10 @@ def getAlignedImaged(directory, images):
 def calculateOpticalFlow(images, method, from_cache=False, flowmap_dir=None):
     if flowmap_dir:
         flowmap_dir = os.path.join(flowmap_dir, method)
+        os.makedirs(flowmap_dir, exist_ok=True)
     
     # load from cache if possible
-    if from_cache and flowmap_dir and len(os.listdir(flowmap_dir)) == len(images)-1:
+    if from_cache and os.path.exists(flowmap_dir) and len(os.listdir(flowmap_dir)) > 0:
         flowmaps = []
         for filename in os.listdir(flowmap_dir):
             flowmap = np.load(os.path.join(flowmap_dir, filename))
@@ -101,7 +105,7 @@ def calculateOpticalFlow(images, method, from_cache=False, flowmap_dir=None):
     return flowmaps
 
 
-def subjectDetection(image):
+def subjectDetection(image, face_enable=False):
     """ 
     From an image, produces and returns a face mask
 
@@ -110,25 +114,50 @@ def subjectDetection(image):
     """
     # TODO: Maybe also allow user to use their own custom mask
 
-    # TODO: Find gaze attention mask
-    # TODO: Find subject mask
-    # TODO: Combine both of them according to equation in paper
-    face_mask = None
+    # Find gaze attention mask
+    print("Finding gaze attention mask...")
+    attention_mask = getAttentionMask(image) #s
+    attention_mask = normalize(attention_mask)
+    
+    # Find subject mask
+    head_mask = np.zeros_like(attention_mask)
+    if face_enable:
+        print("Finding head mask...")
+        head_mask = getHeadSegmentation(image) #f
+        head_mask = normalize(head_mask)
+    
+    # Combine both of them according to equation in paper
+    face_mask = attention_mask * (1+head_mask)
+    face_mask = normalize(face_mask)
+    cv2.imshow("face_mask",face_mask)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
     return face_mask
 
 
-def interpolateFrames(frame1, frame2, num_frames):
+def interpolateFrames(frame1, frame2, flow_map, num_frames):
     """
     Takes in 2 sequential frames, produces a list of frames in between
     
     Returns:
         List of inbetween frames
     """
-    inbetween_frames = None
+
+    def generateOneFrame(flow_map, t):
+        # Forward pass
+        flow_map = flow_map * t
+        flow_map[:,:,0] += np.arange(w)
+        flow_map[:,:,1] += np.arange(h)[:,np.newaxis]
+
+        # Backward pass
+        return cv2.remap(frame1, flow_map, None, cv2.INTER_LINEAR)
+
+    h, w = flow_map.shape[:2]
+    inbetween_frames = [generateOneFrame(flow_map, t/num_frames) for t in range(1, num_frames)]
     return inbetween_frames
 
 
-def blurImages(images):
+def blurImages(images, flow_maps):
     """
     Takes a series of images and blurs them together via linear interpolation.
     
@@ -139,8 +168,8 @@ def blurImages(images):
     weight = 1
     for i in range(1, len(images)):
         # generate inbetween
-        NUM_FRAMES = 10
-        inbetween_frames = interpolateFrames(images[i-1], images[i], NUM_FRAMES)
+        NUM_FRAMES = 1 << 4 - 1
+        inbetween_frames = interpolateFrames(images[i-1], images[i], flow_maps[0], NUM_FRAMES)
         inbetween_frames.append(images[1])
         new_weight = weight + len(inbetween_frames)
         
@@ -169,42 +198,65 @@ def composite(sharp_image, blurred_image, flow_maps, subject_mask):
      
 
 def pipeline():
-    image_directory = "examples/helen"
-    flowmap_directory = "flowmap"
+    # 0. prepare directories
+    image_directory = "examples/tiger"
+    flowmap_directory = os.path.join(image_directory, "flow_map")
+    aligned_images_directory = os.path.join(image_directory, "aligned_images")
+    output_directory = os.path.join(image_directory, "output")
+    os.makedirs(flowmap_directory, exist_ok=True)
+    os.makedirs(aligned_images_directory, exist_ok=True)
+    os.makedirs(output_directory, exist_ok=True)
 
     # 1. read all images
-    images = readImages(image_directory)
+    print("Reading Images...")
+    images = readImages(image_directory, resize_scale=1/4)
     print(f"number of images: {len(images)} = N")
+    print(f"image shape: {images[0].shape} = (H, W, 3)")
+    print()
 
-    # # 2. align images using the first frame as the reference
-    # aligned_images_directory = "examples/helen/aligned_images"
-    # images = getAlignedImaged(aligned_images_directory, images)
+    # 2. align images using the first frame as the reference
+    print("Aligning Images...")
+    images = getAlignedImaged(images, from_cache=False, directory=aligned_images_directory)
+    print(f"number of aligned images: {len(images)} = N")
+    print(f"aligned image shape: {images[0].shape} = (H, W, 3)")
+    print()
 
     # 2. read/calculate optical flow maps
-    method = "raft"
+    print("Calculating optical flow maps...")
+    method = "cv2"
     flow_maps = calculateOpticalFlow(images, method=method, from_cache=False, flowmap_dir=flowmap_directory)
     print(f"number of flow maps: {len(flow_maps)} = N-1")
     print(f"flow shape: {flow_maps[0].shape} = (H, W, 2)")
     print()
 
-    flow_img = flow_to_image(torch.tensor(flow_maps[0].transpose(2, 0, 1), dtype=torch.float32)).numpy().transpose(1, 2, 0)
-    print(flow_img.shape)
-    cv2.imshow("example flow map", flow_img)
-    cv2.waitKey()
-    cv2.destroyAllWindows()
+    # flow_img = flow_to_image(torch.tensor(flow_maps[0].transpose(2, 0, 1), dtype=torch.float32)).numpy().transpose(1, 2, 0)
+    # cv2.imshow("example flow map", flow_img)
+    # cv2.waitKey()
+    # cv2.destroyAllWindows()
 
-    # 3. subject detection (creating the face mask) -> one face mask
+    # 3. subject detection
+    #  (creating the face mask) -> one face mask
+    print("Creating face mask...")
     sharp_image = images[0]
     face_mask = subjectDetection(sharp_image)
-    cv2.imwrite("output/face_mask.png", face_mask)
+    cv2.imwrite(os.path.join(output_directory, "face_mask.png"), face_mask * 255)
+    # print("face_mask min", np.min(face_mask))
+    # print("face_mask max", np.max(face_mask))
+    print()
 
     # 4. interpolate between frames -> one blurred image
-    blurred_image = blurImages(images)
-    cv2.imwrite("output/blurred_image.png", blurred_image)
+    print("Linearly interpolating between frames...")
+    blurred_image = blurImages(images, flow_maps)
+    cv2.imwrite(os.path.join(output_directory, "blurred_image.png"), blurred_image)
+    # print("blurred_image min", np.min(blurred_image))
+    # print("blurred_image max", np.max(blurred_image))
+    print()
 
     # 5. composite
+    print("Compositing...")
     result = composite(sharp_image, blurred_image, flow_maps, face_mask)
-    cv2.imwrite("output/result.png", result)
+    cv2.imwrite(os.path.join(output_directory, "result.png"), result)
+    print("Finished!")
 
 
 if __name__ == "__main__":

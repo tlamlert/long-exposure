@@ -11,6 +11,7 @@ def calc_F_ref(F):
     F_ref.fill(robust_max)
     return F_ref
 
+
 def calc_F(optical_flows):
     # optical_flows shape: W * H * 2 * N
     # assuming the optical flows are stacked in the way that the last channel = # optical flows = N.
@@ -24,10 +25,16 @@ def calc_Mflow(optical_flows, sharp_image):
     mFlow_numerator = F - ALPHA * F_ref
     mFlow_denom = BETA * F_ref - ALPHA * F_ref
     mFlow = mFlow_numerator / mFlow_denom
+    mFlow = mFlow.transpose(1, 2, 0)
+    
+    print("mFlow shape : ", mFlow.shape)
+    print("F shape : ", F.shape)
+    print("F_ref shape : ", F_ref.shape)
     
     # apply bilateral blur using sharp image as a guide
     bilateral = cv2.bilateralFilter(mFlow, 15, 75, 75)  # -> this is not with sharp image as a guide. Note: if it looks bad, comment this out.
     return bilateral
+
 
 def alpha_blending(source, mask, target):
     """
@@ -44,4 +51,4 @@ def alpha_blending(source, mask, target):
         np.array of blended image
     """
 
-    return (source * mask) + (target * (1 - mask))
+    return (source * mask[..., None]) + (target * (1 - mask[..., None]))
