@@ -79,8 +79,8 @@ def normalize(array):
     
 
 
-# # img0_path = "./examples/helen/img_0.JPG"
-# img0_path = "./examples/tiger/tiger.jpeg"
+# img0_path = "./examples/helen/img_0.JPG"
+# img0_path = "./examples/tiger/img_0.JPG"
 # img1_path = "./examples/img_1.JPG"
 # img0 = cv2.imread(img0_path, cv2.COLOR_BGR2RGB)
 # cv2.imshow("akldsj;",img0)

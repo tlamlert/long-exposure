@@ -13,10 +13,21 @@ def calc_F_ref(F):
 
 
 def calc_F(optical_flows):
-    # optical_flows shape: W * H * 2 * N
+    # optical_flows shape: N * W * H * 2
     # assuming the optical flows are stacked in the way that the last channel = # optical flows = N.
     # output should be of size W * H
-    return np.max(optical_flows, axis=-1)
+    # (3, 1008, 756, 2)
+    mag_list = []
+    for optical_f in optical_flows:
+        norm = np.linalg.norm(optical_f, axis=-1)
+        print("NORM SHAPE", norm.shape)
+        mag_list.append(norm)
+
+    optical_flows_array = np.asarray(mag_list)
+    print(optical_flows_array.shape)
+    result = np.max(optical_flows_array, axis=0)
+    print(result.shape)
+    return result
 
 
 def calc_Mflow(optical_flows, sharp_image):
@@ -25,7 +36,7 @@ def calc_Mflow(optical_flows, sharp_image):
     mFlow_numerator = F - ALPHA * F_ref
     mFlow_denom = BETA * F_ref - ALPHA * F_ref
     mFlow = mFlow_numerator / mFlow_denom
-    mFlow = mFlow.transpose(1, 2, 0)
+    # mFlow = mFlow.transpose(1, 2, 0)
     
     print("mFlow shape : ", mFlow.shape)
     print("F shape : ", F.shape)

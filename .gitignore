@@ -7,3 +7,4 @@ __pycache__
 /examples/*/aligned_images/
 /examples/*/flow_map/
 /examples/*/output/
+/env
