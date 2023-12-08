@@ -36,7 +36,7 @@ def readImages(directory, resize_scale=1):
     for filename in sorted(os.listdir(directory)):
         if os.path.isdir(filename) or filename == "aligned_images" or filename == "output" or filename == "flow_map":
             continue
-        img = cv2.imread(os.path.join(directory, filename), cv2.IMREAD_UNCHANGED)
+        img = cv2.imread(os.path.join(directory, filename), cv2.IMREAD_COLOR)
         if resize_scale != 1:
             img = cv2.resize(img, (0, 0), fx=resize_scale, fy=resize_scale)
         images.append(img)
@@ -217,6 +217,7 @@ def pipeline():
     # 1.1. read all images
     print("Reading Images...")
     images = readImages(image_directory, resize_scale=1/4)
+    images = images[:2]
     print(f"number of images: {len(images)} = N")
     print(f"image shape: {images[0].shape} = (H, W, 3)")
     print()
@@ -236,16 +237,16 @@ def pipeline():
 
     # 2. read/calculate optical flow maps
     print("Calculating optical flow maps...")
-    method = "raft"
+    method = "cv2"
     flow_maps = calculateOpticalFlow(images, method=method, from_cache=False, flowmap_dir=flowmap_directory)
     print(f"number of flow maps: {len(flow_maps)} = N-1")
     print(f"flow shape: {flow_maps[0].shape} = (H, W, 2)")
     print()
 
-    flow_img = flow_to_image(torch.tensor(flow_maps[0].transpose(2, 0, 1), dtype=torch.float32)).numpy().transpose(1, 2, 0)
-    cv2.imshow("example flow map", flow_img)
-    cv2.waitKey()
-    cv2.destroyAllWindows()
+    # flow_img = flow_to_image(torch.tensor(flow_maps[0].transpose(2, 0, 1), dtype=torch.float32)).numpy().transpose(1, 2, 0)
+    # cv2.imshow("example flow map", flow_img)
+    # cv2.waitKey()
+    # cv2.destroyAllWindows()
 
     # 3. subject detection
     print("Creating face mask...")
@@ -263,7 +264,6 @@ def pipeline():
     # 5. composite
     print("Compositing...")
     result = composite(sharp_image, blurred_image, flow_maps, face_mask)
-    result.transpose(1,0,2)
     cv2.imwrite(os.path.join(output_directory, "result.png"), result)
     print("Finished!")
 
