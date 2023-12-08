@@ -152,7 +152,6 @@ def interpolateFrames(frame1, frame2, input_flow_map, num_frames):
         h, w = flow_map.shape[:2]
 
         # Forward pass
-        print(t)
         flow_map = flow_map * t
         flow_map[:,:,0] += np.arange(w)
         flow_map[:,:,1] += np.arange(h)[:,np.newaxis]
