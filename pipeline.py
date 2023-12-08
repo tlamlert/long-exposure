@@ -221,7 +221,7 @@ def pipeline():
     # 1.1. read all images
     print("Reading Images...")
     images = readImages(image_directory, resize_scale=1/4)
-    images = images[:4]
+    # images = images[:8]
     print(f"number of images: {len(images)} = N")
     print(f"image shape: {images[0].shape} = (H, W, 3)")
     print()
