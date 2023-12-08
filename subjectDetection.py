@@ -55,8 +55,8 @@ def getAttentionMask(image):
     # renormalize log density
     centerbias -= logsumexp(centerbias)
 
-    image_tensor = torch.tensor([image.transpose(2, 0, 1)]).to(DEVICE)
-    centerbias_tensor = torch.tensor([centerbias]).to(DEVICE)
+    image_tensor = torch.tensor(image.transpose(2, 0, 1)[None, ...]).to(DEVICE)
+    centerbias_tensor = torch.tensor(centerbias[None, ...]).to(DEVICE)
 
     log_density_prediction = model(image_tensor, centerbias_tensor)
     # print(log_density_prediction.shape)

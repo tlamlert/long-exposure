@@ -14,14 +14,14 @@ import torchvision.transforms.functional as F
 def preprocess(img1_batch, img2_batch, weights=Raft_Small_Weights.DEFAULT):
     transforms = weights.transforms()
 
-    # compute width and height
-    _, width, height = img1_batch[0].shape
-    width -= width % 8
-    height -= height % 8
-    # TODO: images too big
+    # # compute width and height
+    # _, width, height = img1_batch[0].shape
+    # width -= width % 8
+    # height -= height % 8
+    # # TODO: images too big
 
-    img1_batch = F.resize(img1_batch, size=[width, height], antialias=False)
-    img2_batch = F.resize(img2_batch, size=[width, height], antialias=False)
+    # img1_batch = F.resize(img1_batch, size=[width, height], antialias=False)
+    # img2_batch = F.resize(img2_batch, size=[width, height], antialias=False)
     return transforms(img1_batch, img2_batch)
 
 
