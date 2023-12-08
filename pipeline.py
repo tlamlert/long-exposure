@@ -33,7 +33,7 @@ def readImages(directory, resize_scale=1):
         List of images
     """
     images = []
-    for filename in os.listdir(directory):
+    for filename in sorted(os.listdir(directory)):
         if os.path.isdir(filename) or filename == "aligned_images" or filename == "output" or filename == "flow_map":
             continue
         img = cv2.imread(os.path.join(directory, filename), cv2.IMREAD_UNCHANGED)
@@ -67,6 +67,11 @@ def getAlignedImaged(images, from_cache=False, directory=None):
         writeImages(directory, alignedImages)
         
     return alignedImages
+
+
+def naiveBlurImages(images):
+    # naively blur all images together by taking the average
+    return np.mean(np.stack(images, -1), axis=-1)
 
 
 def calculateOpticalFlow(images, method, from_cache=False, flowmap_dir=None):
@@ -221,6 +226,12 @@ def pipeline():
     images = getAlignedImaged(images, from_cache=False, directory=aligned_images_directory)
     print(f"number of aligned images: {len(images)} = N")
     print(f"aligned image shape: {images[0].shape} = (H, W, 3)")
+    print()
+
+    # 1.3. naive long exposure
+    print("Naively blurring images...")
+    naive_blurred = naiveBlurImages(images)
+    cv2.imwrite(os.path.join(output_directory, "naive_blurred.png"), naive_blurred)
     print()
 
     # 2. read/calculate optical flow maps

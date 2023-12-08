@@ -3,3 +3,7 @@ __pycache__
 /RAFT/helen/*
 /flowmap/cv2/*
 /flowmap/raft/*
+
+/examples/*/aligned_images/
+/examples/*/flow_map/
+/examples/*/output/
