@@ -28,7 +28,6 @@ def alignImages(images):
 
         # Warp img
         warpedImg = warp_images(img, root_img, mat)
-        # warpedImg = warp_images(root_img, img, mat)
 
         aligned_images.append(warpedImg)
 
@@ -48,7 +47,7 @@ def calculate_transform(pointsA, pointsB, type='homography'):
 
 
 def warp_images(A, B, transform_M):
-    """Warps B to match A. Returns warped_B"""
+    """Warps A to match B. Returns warped_A"""
     # Step 1 - Find the bounding box of transformed/warped A in the coordinate frame of B
     #   so that we can determine the dimensions of our composited image.
     A_h, A_w = A.shape[1], A.shape[0]
@@ -64,8 +63,8 @@ def warp_images(A, B, transform_M):
 
     # Step 3 - Calculate the width and height of the output image.
     B_h, B_w = B.shape[1], B.shape[0]
-    H = A.shape[1]
-    W = A.shape[0]
+    H = B.shape[1]
+    W = B.shape[0]
     # H = dRow + max(B_h-1, warped_A_rect[0][0], warped_A_rect[1][0], warped_A_rect[2][0], warped_A_rect[3][0])
     # W = dCol + max(B_w-1, warped_A_rect[0][1], warped_A_rect[1][1], warped_A_rect[2][1], warped_A_rect[3][1])
 
@@ -73,13 +72,13 @@ def warp_images(A, B, transform_M):
     transform_T = np.array(translation_xy, dtype=np.float32)[:2, :]
 
     # Update transform M with the translation needed to keep A in frame.
-    # transform_M = np.concatenate((transform_T, [[0, 0, 1]]), axis=0) @ transform_M
+    transform_M = np.concatenate((transform_T, [[0, 0, 1]]), axis=0) @ transform_M
 
     # Create the warped images
-    # warped_A = cv2.warpPerspective(A, transform_M, (int(H),int(W)))
-    warped_B = cv2.warpAffine(B, transform_T, (int(H),int(W)))
+    warped_A = cv2.warpPerspective(A, transform_M, (int(H),int(W)))
+    # warped_B = cv2.warpAffine(B, transform_T, (int(H),int(W)))
 
-    return warped_B
+    return warped_A
 
 
 # ===============================================================
