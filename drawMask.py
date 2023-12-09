@@ -1,8 +1,5 @@
 import numpy as np
 import cv2
-
-
-import cv2 
   
 mouseDown = False
 
@@ -36,22 +33,7 @@ def createWindow(img):
 
 def getMask(baseImg):
     drawnImage = createWindow(baseImg)
-    # Debug code below
-    # cv2.imshow("drawnImage", drawnImage) 
-    # cv2.waitKey(0) 
-    # cv2.imshow("orig", baseImg) 
-    # cv2.waitKey(0)
-    # cv2.destroyAllWindows() 
     maskColored = drawnImage - baseImg
     mask = np.sum(maskColored, axis=-1)
     mask = np.clip(mask, 0, 1)
-    # print(np.max(mask))
     return mask
-
-
-# img_orig = np.zeros((500, 500, 3), dtype='float64')
-# image = getMask(img_orig)
-# cv2.imshow("result", image) 
-# cv2.waitKey(0)
-# cv2.destroyAllWindows() 
-

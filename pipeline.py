@@ -233,21 +233,21 @@ def pipeline():
     print()
 
     method = "raft"
-    # 1.1.1. resize images(if raft)
+    # 1.2 resize images(if raft)
     if method == "raft":
         H, W = images[0].shape[:2]
         H -= H % 8
         W -= W % 8
         images = [cv2.resize(img, (W, H)) for img in images]
 
-    # 1.2. align images using the first frame as the reference
+    # 1.3. align images using the first frame as the reference
     print("Aligning Images...")
     images = getAlignedImaged(images, from_cache=False, directory=aligned_images_directory)
     print(f"number of aligned images: {len(images)} = N")
     print(f"aligned image shape FIRST: {images[0].shape} = (H, W, 3)")
     print(f"aligned image shape LAST: {images[-1].shape} = (H, W, 3)")
 
-    # 1.3. naive long exposure
+    # 1.4. naive long exposure
     print("Naively blurring images...")
     naive_blurred = naiveBlurImages(images)
     cv2.imwrite(os.path.join(output_directory, "naive_blurred.png"), naive_blurred)
@@ -256,14 +256,11 @@ def pipeline():
     # 2. read/calculate optical flow maps
     print("Calculating optical flow maps...")
     flow_maps = calculateOpticalFlow(images, method=method, from_cache=False, flowmap_dir=flowmap_directory)
+    example_flow_map = flow_to_image(torch.tensor(flow_maps[0].transpose(2, 0, 1), dtype=torch.float32)).numpy().transpose(1, 2, 0)
+    cv2.imwrite(os.path.join(output_directory, "example_flow_map.png"), example_flow_map)
     print(f"number of flow maps: {len(flow_maps)} = N-1")
     print(f"flow shape: {flow_maps[0].shape} = (H, W, 2)")
     print()
-
-    # flow_img = flow_to_image(torch.tensor(flow_maps[0].transpose(2, 0, 1), dtype=torch.float32)).numpy().transpose(1, 2, 0)
-    # cv2.imshow("example flow map", flow_img)
-    # cv2.waitKey()
-    # cv2.destroyAllWindows()
 
     # 3. subject detection
     print("Creating face mask...")
