@@ -9,6 +9,7 @@ from alignImages import alignImages
 from composite import calc_Mflow, alpha_blending
 from raft import calculateRaftOpticalFlow
 from subjectDetection import getAttentionMask, getHeadSegmentation, normalize
+from drawMask import getMask
 
 """
 Long Exposure Pipeline
@@ -199,8 +200,8 @@ def composite(sharp_image, blurred_image, flow_maps, subject_mask):
     MFlow = calc_Mflow(flow_maps, sharp_image)
 
     # combine the flow and the clipped face masks with a simple max operator
-    # flow_face_mask = np.where(MFlow > subject_mask, MFlow, subject_mask)
-    flow_face_mask = np.zeros_like(subject_mask)
+    flow_face_mask = np.where(MFlow > subject_mask, MFlow, subject_mask)
+    # flow_face_mask = np.zeros_like(subject_mask)
     
     # use composite function(s) from previous previous project code
     composite = alpha_blending(sharp_image, flow_face_mask, blurred_image)
@@ -221,7 +222,7 @@ def pipeline():
     # 1.1. read all images
     print("Reading Images...")
     images = readImages(image_directory, resize_scale=1/4)
-    # images = images[:8]
+    images = images[:8]
     print(f"number of images: {len(images)} = N")
     print(f"image shape: {images[0].shape} = (H, W, 3)")
     print()
@@ -262,8 +263,14 @@ def pipeline():
     # 3. subject detection
     print("Creating face mask...")
     sharp_image = images[0]
-    face_mask = subjectDetection(sharp_image)
-    cv2.imwrite(os.path.join(output_directory, "face_mask.png"), face_mask * 255)
+    subject_mask = None
+    if True:
+        # using first image/sharp image also as base image
+        subject_mask = getMask(sharp_image) 
+    else:
+        face_mask = subjectDetection(sharp_image)
+        subject_mask = face_mask
+    cv2.imwrite(os.path.join(output_directory, "face_mask.png"), subject_mask * 255)
     print()
 
     # 4. interpolate between frames -> one blurred image
@@ -274,7 +281,7 @@ def pipeline():
 
     # 5. composite
     print("Compositing...")
-    result = composite(sharp_image, blurred_image, flow_maps, face_mask)
+    result = composite(sharp_image, blurred_image, flow_maps, subject_mask)
     cv2.imwrite(os.path.join(output_directory, "result.png"), result)
     print("Finished!")
 
