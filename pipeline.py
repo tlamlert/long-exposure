@@ -210,7 +210,7 @@ def composite(sharp_image, blurred_image, flow_maps, subject_mask):
 
 def pipeline():
     # 0. prepare directories
-    image_directory = "examples/tiger"
+    image_directory = "examples/helen_face_mov"
     flowmap_directory = os.path.join(image_directory, "flow_map")
     aligned_images_directory = os.path.join(image_directory, "aligned_images")
     output_directory = os.path.join(image_directory, "output")
