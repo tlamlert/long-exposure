@@ -198,9 +198,27 @@ def composite(sharp_image, blurred_image, flow_maps, subject_mask):
         Final output image
     """
     MFlow = calc_Mflow(flow_maps, sharp_image)
+    print("np.max(MFlow) BEFORE", np.max(MFlow))
+    MFlow = normalize(MFlow)
+    print("np.max(MFlow) After", np.max(MFlow))
 
     # combine the flow and the clipped face masks with a simple max operator
     flow_face_mask = np.where(MFlow > subject_mask, MFlow, subject_mask)
+    cv2.imshow("flow_face_mask", flow_face_mask) 
+    cv2.waitKey(0)
+    cv2.imshow("sharp_image", sharp_image) 
+    cv2.waitKey(0)
+    cv2.imshow("blurred_image", blurred_image) 
+    cv2.waitKey(0)
+    blurred_image = blurred_image
+    cv2.imshow("blurred_image_after", blurred_image) 
+    cv2.waitKey(0)
+    cv2.destroyAllWindows() 
+    print("np.max(sharp_image)", np.max(sharp_image))
+    print("np.max(flow_face_mask) BEFORE", np.max(flow_face_mask))
+    flow_face_mask = normalize(flow_face_mask)
+    print("np.max(flow_face_mask) After", np.max(flow_face_mask))
+
     # flow_face_mask = np.zeros_like(subject_mask)
     
     # use composite function(s) from previous previous project code
