@@ -29,7 +29,7 @@ def createWindow(img):
     cv2.setMouseCallback(winname, draw_circle) 
     while True:
         cv2.imshow(winname, image) 
-        if cv2.waitKey(10) == 27: 
+        if cv2.waitKey(10) == 27: # press esc to end drawing mask
             break
     cv2.destroyAllWindows() 
     return image

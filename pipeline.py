@@ -25,7 +25,7 @@ Long Exposure Pipeline
 5. composite
 """
 
-USE_USER_MASK = True
+USE_USER_MASK = True # Note press ESC to end drawing mask
 
 def readImages(directory, resize_scale=1):
     """
@@ -201,6 +201,7 @@ def composite(sharp_image, blurred_image, flow_maps, subject_mask):
     MFlow = calc_Mflow(flow_maps, sharp_image)
     MFlow = normalize(MFlow)
     # combine the flow and the clipped face masks with a simple max operator
+    # MFlow = np.zeros_like(subject_mask) # zero out MFlow
     flow_face_mask = np.where(MFlow > subject_mask, MFlow, subject_mask)
     blurred_image = blurred_image
     flow_face_mask = normalize(flow_face_mask) # just added this in case
@@ -215,7 +216,7 @@ def composite(sharp_image, blurred_image, flow_maps, subject_mask):
 
 def pipeline():
     # 0. prepare directories
-    image_directory = "examples/helen_face_mov"
+    image_directory = "examples/tiger"
     flowmap_directory = os.path.join(image_directory, "flow_map")
     aligned_images_directory = os.path.join(image_directory, "aligned_images")
     output_directory = os.path.join(image_directory, "output")
