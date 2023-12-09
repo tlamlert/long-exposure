@@ -4,25 +4,6 @@ import cv2
 
 import cv2 
   
-# img = None  
-# img = np.zeros((500, 500, 3), dtype='float64')
-  
-# while True: 
-#     cv2.imshow("Title of Popup Window", img) 
-      
-#     if cv2.waitKey(10) & 0xFF == 27: 
-#         break
-          
-# cv2.destroyAllWindows() 
-
-# image = None
-
-# def draw(event, mouseX, mouseY, flag, param):
-#     if event == cv2.EVENT_LBUTTONDOWN:
-#         print("YO")
-#         cv2.circle(image, (mouseX, mouseY), 5, (0, 255, 0), 2)
-
-
 mouseDown = False
 
 def createWindow(img):
