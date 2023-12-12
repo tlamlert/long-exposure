@@ -36,4 +36,5 @@ def getMask(baseImg):
     maskColored = drawnImage - baseImg
     mask = np.sum(maskColored, axis=-1)
     mask = np.clip(mask, 0, 1)
+    mask = cv2.GaussianBlur(mask,(5,5),0)
     return mask
