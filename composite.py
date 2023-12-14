@@ -36,9 +36,10 @@ def calc_F(optical_flows):
 def calc_Mflow(optical_flows, sharp_image):
     F = calc_F(optical_flows)
     F_ref = calc_F_ref(F)
-    mFlow_numerator = F - ALPHA * F_ref
-    mFlow_denom = BETA * F_ref - ALPHA * F_ref
+    mFlow_numerator = F - np.clip(ALPHA * F_ref, 0, None)
+    mFlow_denom = np.clip(BETA * F_ref, None, 1) - np.clip(ALPHA * F_ref, 0, None)
     mFlow = mFlow_numerator / mFlow_denom
+    # mFlow = 1 - mFlow
     # mFlow = mFlow.transpose(1, 2, 0)
     
     print("mFlow shape : ", mFlow.shape)

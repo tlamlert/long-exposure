@@ -36,7 +36,7 @@ def readImages(directory, resize_scale=1):
     """
     images = []
     for filename in sorted(os.listdir(directory)):
-        if os.path.isdir(filename) or filename == "aligned_images" or filename == "output" or filename == "flow_map" or filename == "output_initial":
+        if os.path.isdir(filename) or filename == "aligned_images" or filename == "output" or filename == "flow_map" or filename == "output_initial" or filename == "output_initial2":
             continue
         img = cv2.imread(os.path.join(directory, filename), cv2.IMREAD_COLOR)
         if resize_scale != 1:
@@ -216,7 +216,7 @@ def composite(sharp_image, blurred_image, flow_maps, subject_mask):
 
 def pipeline():
     # 0. prepare directories
-    image_directory = "examples/hair_close/"
+    image_directory = "examples/tiger/"
     flowmap_directory = os.path.join(image_directory, "flow_map")
     aligned_images_directory = os.path.join(image_directory, "aligned_images")
     output_directory = os.path.join(image_directory, "output")
@@ -226,7 +226,7 @@ def pipeline():
 
     # 1.1. read all images
     print("Reading Images...")
-    images = readImages(image_directory, resize_scale=1/4)
+    images = readImages(image_directory, resize_scale=1/8)
     # images = readImages(image_directory, resize_scale=1)
     # images = images[2:10]
     print(f"number of images: {len(images)} = N")
@@ -256,7 +256,7 @@ def pipeline():
 
     # 3. subject detection
     print("Creating face mask...")
-    sharp_image = images[5]
+    sharp_image = images[0]
     subject_mask = None
     
     if USE_USER_MASK:
