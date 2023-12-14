@@ -36,7 +36,7 @@ def readImages(directory, resize_scale=1):
     """
     images = []
     for filename in sorted(os.listdir(directory)):
-        if os.path.isdir(filename) or filename == "aligned_images" or filename == "output" or filename == "flow_map":
+        if os.path.isdir(filename) or filename == "aligned_images" or filename == "output" or filename == "flow_map" or filename == "output_initial":
             continue
         img = cv2.imread(os.path.join(directory, filename), cv2.IMREAD_COLOR)
         if resize_scale != 1:
@@ -216,7 +216,7 @@ def composite(sharp_image, blurred_image, flow_maps, subject_mask):
 
 def pipeline():
     # 0. prepare directories
-    image_directory = "examples/tiger"
+    image_directory = "examples/hair_close/"
     flowmap_directory = os.path.join(image_directory, "flow_map")
     aligned_images_directory = os.path.join(image_directory, "aligned_images")
     output_directory = os.path.join(image_directory, "output")
@@ -227,7 +227,8 @@ def pipeline():
     # 1.1. read all images
     print("Reading Images...")
     images = readImages(image_directory, resize_scale=1/4)
-    images = images[:8]
+    # images = readImages(image_directory, resize_scale=1)
+    # images = images[2:10]
     print(f"number of images: {len(images)} = N")
     print(f"image shape: {images[0].shape} = (H, W, 3)")
     print()
@@ -253,18 +254,9 @@ def pipeline():
     cv2.imwrite(os.path.join(output_directory, "naive_blurred.png"), naive_blurred)
     print()
 
-    # 2. read/calculate optical flow maps
-    print("Calculating optical flow maps...")
-    flow_maps = calculateOpticalFlow(images, method=method, from_cache=False, flowmap_dir=flowmap_directory)
-    example_flow_map = flow_to_image(torch.tensor(flow_maps[0].transpose(2, 0, 1), dtype=torch.float32)).numpy().transpose(1, 2, 0)
-    cv2.imwrite(os.path.join(output_directory, "example_flow_map.png"), example_flow_map)
-    print(f"number of flow maps: {len(flow_maps)} = N-1")
-    print(f"flow shape: {flow_maps[0].shape} = (H, W, 2)")
-    print()
-
     # 3. subject detection
     print("Creating face mask...")
-    sharp_image = images[0]
+    sharp_image = images[5]
     subject_mask = None
     
     if USE_USER_MASK:
@@ -275,6 +267,16 @@ def pipeline():
         subject_mask = face_mask
     cv2.imwrite(os.path.join(output_directory, "face_mask.png"), subject_mask * 255)
     print()
+
+    # 2. read/calculate optical flow maps
+    print("Calculating optical flow maps...")
+    flow_maps = calculateOpticalFlow(images, method=method, from_cache=False, flowmap_dir=flowmap_directory)
+    example_flow_map = flow_to_image(torch.tensor(flow_maps[0].transpose(2, 0, 1), dtype=torch.float32)).numpy().transpose(1, 2, 0)
+    cv2.imwrite(os.path.join(output_directory, "example_flow_map.png"), example_flow_map)
+    print(f"number of flow maps: {len(flow_maps)} = N-1")
+    print(f"flow shape: {flow_maps[0].shape} = (H, W, 2)")
+    print()
+
 
     # 4. interpolate between frames -> one blurred image
     print("Linearly interpolating between frames...")
